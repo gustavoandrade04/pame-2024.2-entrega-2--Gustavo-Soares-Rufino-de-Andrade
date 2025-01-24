@@ -1,0 +1,97 @@
+{
+  "reservas": [
+    {
+      "id": 1,
+      "idCliente": 1,
+      "status": "Confirmada",
+      "dataEntrada": "04/10/2025",
+      "dataSaida": "08/10/2025",
+      "tipoQuarto": "Presidencial",
+      "numeroCamas": 2
+    }
+  ],
+  "funcionarios": [
+    {
+      "id": 1,
+      "nomeUsuario": "gabriel",
+      "cpf": "1234",
+      "email": "abc",
+      "senha": "guga0410"
+    }
+  ],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "gustavo ",
+      "dataNascimento": "04/10/2004",
+      "cpf": "1234",
+      "email": "a",
+      "senha": "guga0410"
+    }
+  ],
+  "quartos": [
+    {
+      "nome": "CCE",
+      "descricao": "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo",
+      "quantidadeCamas": 1,
+      "precoPorNoite": 350,
+      "quantidadeDisponivel": 12
+    },
+    {
+      "nome": "CCE",
+      "descricao": "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo",
+      "quantidadeCamas": 2,
+      "precoPorNoite": 450,
+      "quantidadeDisponivel": 15
+    },
+    {
+      "nome": "CCE",
+      "descricao": "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo",
+      "quantidadeCamas": 3,
+      "precoPorNoite": 550,
+      "quantidadeDisponivel": 10
+    },
+    {
+      "nome": "PRO",
+      "descricao": "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido",
+      "quantidadeCamas": 1,
+      "precoPorNoite": 600,
+      "quantidadeDisponivel": 10
+    },
+    {
+      "nome": "PRO",
+      "descricao": "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido",
+      "quantidadeCamas": 2,
+      "precoPorNoite": 700,
+      "quantidadeDisponivel": 10
+    },
+    {
+      "nome": "PRO",
+      "descricao": "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido",
+      "quantidadeCamas": 3,
+      "precoPorNoite": 850,
+      "quantidadeDisponivel": 10
+    },
+    {
+      "nome": "Presidencial",
+      "descricao": "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar",
+      "quantidadeCamas": 1,
+      "precoPorNoite": 1000,
+      "quantidadeDisponivel": 5
+    },
+    {
+      "nome": "Presidencial",
+      "descricao": "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar",
+      "quantidadeCamas": 2,
+      "precoPorNoite": 1200,
+      "quantidadeDisponivel": 4
+    },
+    {
+      "nome": "Presidencial",
+      "descricao": "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar",
+      "quantidadeCamas": 3,
+      "precoPorNoite": 1500,
+      "quantidadeDisponivel": 5
+    }
+  ]
+}
