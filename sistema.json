@@ -8,6 +8,15 @@
       "dataSaida": "08/10/2025",
       "tipoQuarto": "Presidencial",
       "numeroCamas": 2
+    },
+    {
+      "id": 2,
+      "idCliente": 2,
+      "status": "Confirmada",
+      "dataEntrada": "04/10/2025",
+      "dataSaida": "08/10/2025",
+      "tipoQuarto": "Presidencial",
+      "numeroCamas": 3
     }
   ],
   "funcionarios": [
@@ -99,7 +108,7 @@
       "descricao": "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar",
       "quantidadeCamas": 3,
       "precoPorNoite": 1500,
-      "quantidadeDisponivel": 5
+      "quantidadeDisponivel": 4
     }
   ]
 }
