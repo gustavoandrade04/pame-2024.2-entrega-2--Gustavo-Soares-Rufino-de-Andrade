@@ -1,11 +1,9 @@
-const readline = require('readline');
-const fs = require('fs');
-
-
+const readline = require('readline'); // Declare a constante readline apenas uma vez
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout,
+  output: process.stdout
 });
+const fs = require('fs');  // Importação do módulo fs
 
 class Reserva {
   constructor(id, idCliente, status, dataEntrada, dataSaida, tipoQuarto, numeroCamas) {
@@ -240,7 +238,7 @@ async function loginCliente(sistema) {
   const cliente = sistema.buscarClientePorEmailSenha(email, senha);
 
   if (cliente) {
-    console.log(`\nBem-vindo, ${cliente.nome}! Login realizado com sucesso.`);
+    console.log("\nBem-vindo, " + cliente.nome + "! Login realizado com sucesso.");
 
     console.log("\nO que você gostaria de fazer?");
     console.log("1. Fazer uma nova reserva");
@@ -249,9 +247,13 @@ async function loginCliente(sistema) {
     const escolha = await perguntar("Escolha uma opção (1/2): ");
 
     if (escolha === "1") {
-      await reservarQuartoCliente(sistema, cliente); 
+      await reservarQuartoCliente(sistema, cliente);
     } else if (escolha === "2") {
       await consultarReservasCliente(sistema, cliente);
+      if (sistema.reservas.filter(reserva => reserva.idCliente === cliente.id).length === 0) {
+        console.log("Você não tem reservas. Deslogando...");
+        return;  // Desloga o cliente
+      }
     } else {
       console.log("\nOpção inválida. Tente novamente.");
     }
@@ -259,6 +261,7 @@ async function loginCliente(sistema) {
     console.log("\nLogin falhou. Verifique suas credenciais e tente novamente.");
   }
 }
+
 async function consultarReservasCliente(sistema, cliente) {
   console.log("\n[Consultando Reservas]");
 
@@ -296,6 +299,23 @@ function calcularNumeroDeNoites(dataEntrada, dataSaida) {
   const diferencia = saida - entrada;
   return diferencia / (1000 * 3600 * 24);
 }
+function validarCPF(cpf) {
+  return /^\d{11}$/.test(cpf);
+}
+
+function validarEmail(email) {
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
+}
+
+function validarData(data) {
+  const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  const match = data.match(regex);
+  if (!match) return false;
+  const [_, dia, mes, ano] = match;
+  const dataNascimento = new Date(`${ano}-${mes}-${dia}`);
+  return dataNascimento instanceof Date && !isNaN(dataNascimento);
+}
+
 
 
 async function cadastroFuncionario(sistema) {
@@ -344,19 +364,19 @@ async function loginFuncionario(sistema) {
 
 async function reservarQuartoCliente(sistema, cliente) {
   console.log("\n[Reserva de Quarto]");
-  console.log("Aqui estão os tipos de quartos disponíveis:");
 
-  
   const tiposDeQuartosDisponiveis = [...new Set(sistema.quartos.map(quarto => quarto.nome))];
 
   tiposDeQuartosDisponiveis.forEach((tipo, index) => {
     console.log(`${index + 1}. Tipo: ${tipo}`);
   });
 
-  const escolhaTipoQuarto = parseInt(await perguntar("Escolha o tipo de quarto (1 para CCE, 2 para PRO, 3 para Presidencial): "), 10);
+  const escolhaTipoQuarto = parseInt(await perguntar("Escolha o tipo de quarto (1 para CCE, 2 para PRO, 3 para Presidencial ou 0 para voltar): "), 10);
+
+  if (escolhaTipoQuarto === 0) return; // Se voltar, retorna à seleção de tipo de quarto.
+
   const tipoQuartoEscolhido = tiposDeQuartosDisponiveis[escolhaTipoQuarto - 1];
 
-  
   const quartosTipoEscolhido = sistema.quartos.filter(quarto => quarto.nome === tipoQuartoEscolhido && quarto.quantidadeDisponivel > 0);
 
   if (quartosTipoEscolhido.length === 0) {
@@ -364,42 +384,34 @@ async function reservarQuartoCliente(sistema, cliente) {
     return;
   }
 
-  
   console.log("\nEscolha o número de camas disponíveis para o quarto:", tipoQuartoEscolhido);
-  
-  const numerosCamasDisponiveis = [...new Set(quartosTipoEscolhido.map(quarto => quarto.quantidadeCamas))]; // Obtém os números de camas únicos
 
-  
+  const numerosCamasDisponiveis = [...new Set(quartosTipoEscolhido.map(quarto => quarto.quantidadeCamas))]; 
+
   numerosCamasDisponiveis.forEach((quantidade, index) => {
     console.log(`${index + 1}. Número de camas: ${quantidade}`);
   });
 
-  const numeroCamasEscolhido = parseInt(await perguntar("Escolha o número de camas: "), 10);
+  const numeroCamasEscolhido = parseInt(await perguntar("Escolha o número de camas (ou 0 para voltar): "), 10);
+
+  if (numeroCamasEscolhido === 0) return; // Voltar à escolha de tipo de quarto
 
   if (!numerosCamasDisponiveis.includes(numeroCamasEscolhido)) {
     console.log("\nOpção de número de camas inválida. Tente novamente.");
     return;
   }
 
-  
   const dataEntrada = await perguntar("Digite a data de entrada (DD/MM/AAAA): ");
   const dataSaida = await perguntar("Digite a data de saída (DD/MM/AAAA): ");
 
-  
-  sistema.reservarQuarto(cliente.id, tipoQuartoEscolhido, numeroCamasEscolhido, dataEntrada, dataSaida);
-
-  
-  const quartoReservado = sistema.quartos.find(q => q.nome === tipoQuartoEscolhido && q.quantidadeCamas === numeroCamasEscolhido);
   const numeroNoites = calcularNumeroDeNoites(dataEntrada, dataSaida);
-  const valorTotal = quartoReservado.precoPorNoite * numeroNoites;
+  if (numeroNoites <= 0) {
+    console.log("\nData de saída deve ser posterior à data de entrada.");
+    return;
+  }
 
-  console.log(`\nReserva realizada com sucesso!`);
-  console.log(`Valor total da sua reserva: R$ ${valorTotal.toFixed(2)}`);
+  sistema.reservarQuarto(cliente.id, tipoQuartoEscolhido, numeroCamasEscolhido, dataEntrada, dataSaida);
 }
-
-
-
-
 
 async function main() {
   const sistema = new Sistema();

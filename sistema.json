@@ -27,6 +27,14 @@
       "cpf": "1234",
       "email": "a",
       "senha": "guga0410"
+    },
+    {
+      "id": 2,
+      "nome": "gustavo",
+      "dataNascimento": "04/10/2004",
+      "cpf": "12643950780",
+      "email": "gustavo@gmail.com",
+      "senha": "guga0410"
     }
   ],
   "quartos": [
