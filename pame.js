@@ -83,16 +83,19 @@ class Sistema {
 
   adicionarReserva(reserva) {
     this.reservas.push(reserva);
+    this.salvarDados(); // Salva os dados automaticamente
   }
-
+  
   adicionarFuncionario(funcionario) {
     this.funcionarios.push(funcionario);
+    this.salvarDados(); // Salva os dados automaticamente
   }
-
+  
   adicionarCliente(cliente) {
     this.clientes.push(cliente);
+    this.salvarDados(); // Salva os dados automaticamente
   }
-
+  
   listarReservas() {
     return this.reservas;
   }
@@ -116,6 +119,53 @@ class Sistema {
     return clienteEncontrado;
     
   }
+  editarReserva = async function (idReserva, idCliente, novosDados) {
+    const reserva = this.reservas.find(r => r.id === idReserva && r.idCliente === idCliente);
+    if (!reserva) {
+      console.log("\nReserva não encontrada ou não pertence ao cliente.");
+      return;
+    }
+  
+    // Liberar o quarto previamente reservado
+    const quartoAntigo = this.quartos.find(
+      q => q.nome === reserva.tipoQuarto && q.quantidadeCamas === reserva.numeroCamas
+    );
+    if (quartoAntigo) {
+      quartoAntigo.quantidadeDisponivel += 1;
+    }
+  
+    console.log("\nEscolha um novo quarto:");
+    this.quartos.forEach((q, index) => {
+      console.log(
+        `${index + 1}. ${q.nome} - ${q.quantidadeCamas} camas (Disponíveis: ${q.quantidadeDisponivel})`
+      );
+    });
+  
+    const escolhaQuarto = parseInt(await perguntar("Escolha o número do quarto desejado: "), 10) - 1;
+  
+    // Validar a escolha do quarto
+    if (isNaN(escolhaQuarto) || escolhaQuarto < 0 || escolhaQuarto >= this.quartos.length) {
+      console.log("\nEscolha inválida. Operação cancelada.");
+      return;
+    }
+  
+    const novoQuarto = this.quartos[escolhaQuarto];
+    if (!novoQuarto || novoQuarto.quantidadeDisponivel <= 0) {
+      console.log("\nDesculpe, o quarto solicitado não está disponível.");
+      return;
+    }
+  
+    // Atualizar os dados da reserva
+    reserva.tipoQuarto = novoQuarto.nome;
+    reserva.numeroCamas = novoQuarto.quantidadeCamas;
+    reserva.dataEntrada = novosDados.dataEntrada;
+    reserva.dataSaida = novosDados.dataSaida;
+  
+    // Reservar o novo quarto
+    novoQuarto.quantidadeDisponivel -= 1;
+    console.log("\nReserva atualizada com sucesso!");
+    this.salvarDados();
+  };
   
 
   gerarIdCliente() {
@@ -261,57 +311,40 @@ async function loginCliente(sistema) {
     console.log("\nLogin falhou. Verifique suas credenciais e tente novamente.");
   }
 }
-const prompt = require("prompt-sync")();
-
-let usuarios = [];
-let reservas = [];
-let usuarioLogado = null;
-// Função para validar CPF
-function validarCPF(cpf) {
-  return /^\d{11}$/.test(cpf);
-}
-
-// Função para validar e-mail
-function validarEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-// Função para validar datas (check-in e check-out)
-function validarDatas(checkIn, checkOut) {
-  const dataCheckIn = new Date(checkIn);
-  const dataCheckOut = new Date(checkOut);
-
-  return (
-    !isNaN(dataCheckIn) &&
-    !isNaN(dataCheckOut) &&
-    dataCheckIn < dataCheckOut &&
-    dataCheckIn >= new Date()
-  );
-}
 
 async function consultarReservasCliente(sistema, cliente) {
   console.log("\n[Consultando Reservas]");
 
-  
-  const reservasCliente = sistema.reservas.filter(reserva => reserva.idCliente === cliente.id);
-
+  const reservasCliente = sistema.reservas.filter(r => r.idCliente === cliente.id);
   if (reservasCliente.length === 0) {
     console.log("\nVocê ainda não tem reservas.");
-  } else {
-    reservasCliente.forEach((reserva, index) => {
-      console.log(`\nReserva ${index + 1}:`);
-      console.log(`- Tipo de Quarto: ${reserva.tipoQuarto}`);
-      console.log(`- Número de Camas: ${reserva.numeroCamas}`);
-      console.log(`- Data de Entrada: ${reserva.dataEntrada}`);
-      console.log(`- Data de Saída: ${reserva.dataSaida}`);
-      console.log(`- Status: ${reserva.status}`);
+    return;
+  }
 
-      
-      const quartoReservado = sistema.quartos.find(q => q.nome === reserva.tipoQuarto && q.quantidadeCamas === reserva.numeroCamas);
-      const numeroNoites = calcularNumeroDeNoites(reserva.dataEntrada, reserva.dataSaida);
-      const valorTotal = quartoReservado.precoPorNoite * numeroNoites;
-      console.log(`- Valor Total: R$ ${valorTotal.toFixed(2)}`);
-    });
+  reservasCliente.forEach((reserva, index) => {
+    console.log(`\nReserva ${index + 1}:`);
+    console.log(`- ID: ${reserva.id}`);
+    console.log(`- Tipo de Quarto: ${reserva.tipoQuarto}`);
+    console.log(`- Número de Camas: ${reserva.numeroCamas}`);
+    console.log(`- Data de Entrada: ${reserva.dataEntrada}`);
+    console.log(`- Data de Saída: ${reserva.dataSaida}`);
+    console.log(`- Status: ${reserva.status}`);
+  });
+
+  const acao = await perguntar("\nO que você gostaria de fazer? (1: Editar, 2: Cancelar, 0: Voltar): ");
+  if (acao === "1") {
+    const idReserva = parseInt(await perguntar("Digite o ID da reserva que deseja editar: "), 10);
+    const dataEntrada = await perguntar("Nova data de entrada (DD/MM/AAAA): ");
+    const dataSaida = await perguntar("Nova data de saída (DD/MM/AAAA): ");
+
+    sistema.editarReserva(idReserva, cliente.id, { dataEntrada, dataSaida });
+  } else if (acao === "2") {
+    const idReserva = parseInt(await perguntar("Digite o ID da reserva que deseja cancelar: "), 10);
+    sistema.cancelarReserva(idReserva, cliente.id);
+  } else if (acao === "0") {
+    return;
+  } else {
+    console.log("\nOpção inválida. Tente novamente.");
   }
 }
 
@@ -343,112 +376,7 @@ function validarData(data) {
   return dataNascimento instanceof Date && !isNaN(dataNascimento);
 }
 
-async function gerenciarReserva(sistema, cliente) {
-  console.log("\n[Gerenciamento de Reserva]");
 
-  if (!cliente.reserva) {
-    console.log("Você não possui nenhuma reserva ativa.");
-    return;
-  }
-
-  const reservaAtual = cliente.reserva;
-
-  console.log("\n[Resumo da Reserva Atual]");
-  console.log(`Tipo de quarto: ${reservaAtual.quarto.tipo}`);
-  console.log(`Descrição: ${reservaAtual.quarto.descricao}`);
-  console.log(`Quantidade de camas: ${reservaAtual.quarto.quantidadeCamas}`);
-  console.log(`Check-in: ${reservaAtual.checkIn}`);
-  console.log(`Check-out: ${reservaAtual.checkOut}`);
-  console.log(`Valor total: R$${reservaAtual.valorTotal.toFixed(2)}`);
-
-  const acao = await perguntar("\nO que você deseja fazer?\n1 - Alterar Reserva\n2 - Cancelar Reserva\nEscolha uma opção: ");
-
-  if (acao === "1") {
-    await alterarReserva(sistema, cliente);
-  } else if (acao === "2") {
-    cancelarReserva(sistema, cliente);
-  } else {
-    console.log("\nOpção inválida. Retornando ao menu principal.");
-  }
-}
-
-async function alterarReserva(sistema, cliente) {
-  console.log("\n[Alteração da Reserva]");
-
-  const quartos = [
-    new Quarto("CCE", "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo", 1, 350, 12),
-    new Quarto("CCE", "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo", 2, 450, 15),
-    new Quarto("CCE", "Quarto com vista para a parte interna do hotel, aconchegante e simples, um só cômodo", 3, 550, 10),
-
-    new Quarto("PRO", "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido", 1, 600, 10),
-    new Quarto("PRO", "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido", 2, 700, 10),
-    new Quarto("PRO", "Quarto com vista para a praia, aconchegante, com banheira e com mini closet embutido", 3, 850, 10),
-
-    new Quarto("Presidencial", "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar", 1, 1000, 5),
-    new Quarto("Presidencial", "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar", 2, 1200, 5),
-    new Quarto("Presidencial", "Quarto para um verdadeiro fluxer, 2 cômodos, cozinha, closet, hidromassagem e uma vista única para o mar", 3, 1500, 5),
-  ];
-
-  console.log("\nOpções de quartos disponíveis:");
-  quartos.forEach((quarto, index) => {
-    console.log(`${index + 1} - ${quarto.tipo} (${quarto.descricao}) - Camas: ${quarto.quantidadeCamas} - R$${quarto.precoPorNoite}/noite - Disponibilidade: ${quarto.disponibilidade}`);
-  });
-
-  const escolhaQuarto = parseInt(await perguntar("\nEscolha o novo quarto pelo número correspondente: "));
-  if (escolhaQuarto <= 0 || escolhaQuarto > quartos.length) {
-    console.log("Opção de quarto inválida.");
-    return;
-  }
-
-  const quartoEscolhido = quartos[escolhaQuarto - 1];
-
-  const novoCheckIn = await perguntar("Digite a nova data de check-in (DD/MM/AAAA): ");
-  const novoCheckOut = await perguntar("Digite a nova data de check-out (DD/MM/AAAA): ");
-
-  const dataCheckIn = new Date(novoCheckIn.split('/').reverse().join('-'));
-  const dataCheckOut = new Date(novoCheckOut.split('/').reverse().join('-'));
-
-  if (dataCheckOut <= dataCheckIn) {
-    console.log("Data de check-out deve ser após a data de check-in.");
-    return;
-  }
-
-  const totalDias = Math.ceil((dataCheckOut - dataCheckIn) / (1000 * 60 * 60 * 24));
-  const novoValorTotal = totalDias * quartoEscolhido.precoPorNoite;
-
-  console.log("\n[Resumo da Nova Reserva]");
-  console.log(`Tipo de quarto: ${quartoEscolhido.tipo}`);
-  console.log(`Descrição: ${quartoEscolhido.descricao}`);
-  console.log(`Quantidade de camas: ${quartoEscolhido.quantidadeCamas}`);
-  console.log(`Check-in: ${novoCheckIn}`);
-  console.log(`Check-out: ${novoCheckOut}`);
-  console.log(`Total de noites: ${totalDias}`);
-  console.log(`Valor total: R$${novoValorTotal.toFixed(2)}`);
-
-  const confirmar = await perguntar("\nDeseja confirmar as alterações? (S/N): ");
-  if (confirmar.toLowerCase() === "s") {
-    cliente.reserva = {
-      quarto: quartoEscolhido,
-      checkIn: novoCheckIn,
-      checkOut: novoCheckOut,
-      valorTotal: novoValorTotal,
-    };
-    console.log("\nAlteração realizada com sucesso!");
-  } else {
-    console.log("\nAlteração cancelada.");
-  }
-}
-
-function cancelarReserva(sistema, cliente) {
-  console.log("\n[Cancelamento da Reserva]");
-  const confirmar = prompt("\nTem certeza de que deseja cancelar a reserva? (S/N): ");
-  if (confirmar.toLowerCase() === "s") {
-    cliente.reserva = null;
-    console.log("\nReserva cancelada com sucesso.");
-  } else {
-    console.log("\nCancelamento abortado.");
-  }
-}
 
 
 
@@ -490,6 +418,37 @@ async function loginFuncionario(sistema) {
     console.log(`\nBem-vindo, ${funcionario.nomeUsuario}! Login realizado com sucesso.`);
     console.log("\n[Área de Funcionários]");
     
+    let continuar = true;
+    while (continuar) {
+      console.log("\nO que você gostaria de fazer?");
+      console.log("1. Ver lista de reservas");
+      console.log("2. Sair");
+
+      const escolha = await perguntar("Escolha uma opção (1/2): ");
+
+      if (escolha === "1") {
+        console.log("\n[Lista de Reservas]");
+        if (sistema.reservas.length === 0) {
+          console.log("Não há reservas cadastradas no momento.");
+        } else {
+          sistema.reservas.forEach((reserva, index) => {
+            console.log(`\nReserva ${index + 1}:`);
+            console.log(`- ID: ${reserva.id}`);
+            console.log(`- Cliente ID: ${reserva.idCliente}`);
+            console.log(`- Tipo de Quarto: ${reserva.tipoQuarto}`);
+            console.log(`- Número de Camas: ${reserva.numeroCamas}`);
+            console.log(`- Data de Entrada: ${reserva.dataEntrada}`);
+            console.log(`- Data de Saída: ${reserva.dataSaida}`);
+            console.log(`- Status: ${reserva.status}`);
+          });
+        }
+      } else if (escolha === "2") {
+        continuar = false;
+        console.log("\nSaindo da área de funcionários...");
+      } else {
+        console.log("\nOpção inválida. Tente novamente.");
+      }
+    }
   } else {
     console.log("\nLogin falhou. Verifique suas credenciais e tente novamente.");
   }
@@ -547,231 +506,69 @@ async function reservarQuartoCliente(sistema, cliente) {
   sistema.reservarQuarto(cliente.id, tipoQuartoEscolhido, numeroCamasEscolhido, dataEntrada, dataSaida);
 }
 
-const sistema = new Sistema();
-sistema.carregarDados();
+async function main() {
+  const sistema = new Sistema();
+  sistema.carregarDados();
 
-// Menu inicial
-function menuInicial() {
-  console.log("\n=== Bem-vindo ao Sistema de Reservas ===");
-  console.log("1. Cadastro");
-  console.log("2. Login");
-  console.log("3. Sair");
+  console.log("Bem-vindo ao Sistema do Hotel!");
 
-  const opcao = prompt("Escolha uma opção: ");
+  while (true) {
+    console.log("\nVocê é:");
+    console.log("1. Cliente");
+    console.log("2. Funcionário");
+    console.log("3. Sair do Programa");
 
-  switch (opcao) {
-    case "1":
-      cadastrarUsuario();
+    const tipoUsuario = await perguntar("Escolha uma opção (1/2/3): ");
+
+    if (tipoUsuario === "3") {
+      console.log("Saindo do programa. Até logo!");
+      rl.close();
+      sistema.salvarDados();
       break;
-    case "2":
-      login();
-      break;
-    case "3":
-      console.log("Saindo do sistema...");
-      process.exit();
-    default:
-      console.log("Opção inválida. Tente novamente.");
-      menuInicial();
+    }
+
+    if (tipoUsuario === "1") {
+      await fluxoCliente(sistema);
+    } else if (tipoUsuario === "2") {
+      await fluxoFuncionario(sistema);
+    } else {
+      console.log("\nOpção inválida. Tente novamente.");
+    }
   }
 }
 
-// Cadastro de usuário
-function cadastrarUsuario() {
-  console.log("\n=== Cadastro de Usuário ===");
-  const nome = prompt("Nome: ");
-  const cpf = prompt("CPF (somente números): ");
+async function fluxoCliente(sistema) {
+  console.log("\nVocê já tem uma conta?");
+  console.log("1. Sim, quero fazer login");
+  console.log("2. Não, quero me cadastrar");
 
-  if (!validarCPF(cpf)) {
-    console.log("CPF inválido. Tente novamente.");
-    return cadastrarUsuario();
-  }
+  const escolhaConta = await perguntar("Escolha uma opção (1/2): ");
 
-  const email = prompt("E-mail: ");
-  if (!validarEmail(email)) {
-    console.log("E-mail inválido. Tente novamente.");
-    return cadastrarUsuario();
-  }
-
-  const senha = prompt("Senha: ");
-  usuarios.push({ nome, cpf, email, senha });
-  console.log("Usuário cadastrado com sucesso!");
-  menuInicial();
-}
-
-// Login de usuário
-function login() {
-  console.log("\n=== Login ===");
-  const email = prompt("E-mail: ");
-  const senha = prompt("Senha: ");
-
-  const usuario = usuarios.find(
-    (u) => u.email === email && u.senha === senha
-  );
-
-  if (usuario) {
-    usuarioLogado = usuario;
-    console.log(`Bem-vindo, ${usuario.nome}!`);
-    menuUsuarioLogado();
+  if (escolhaConta === "1") {
+    await loginCliente(sistema);
+  } else if (escolhaConta === "2") {
+    await cadastroCliente(sistema);
   } else {
-    console.log("E-mail ou senha inválidos. Tente novamente.");
-    login();
+    console.log("\nOpção inválida. Tente novamente.");
   }
 }
 
-// Menu do usuário logado
-function menuUsuarioLogado() {
-  console.log("\n=== Menu Principal ===");
-  console.log("1. Fazer Reserva");
-  console.log("2. Consultar Reservas");
-  console.log("3. Alterar Reserva");
-  console.log("4. Cancelar Reserva");
-  console.log("5. Sair");
+async function fluxoFuncionario(sistema) {
+  console.log("\n[Área de Funcionários]");
+  console.log("1. Login");
+  console.log("2. Cadastro");
 
-  const opcao = prompt("Escolha uma opção: ");
+  const escolhaFuncionario = await perguntar("Escolha uma opção (1/2): ");
 
-  switch (opcao) {
-    case "1":
-      fazerReserva();
-      break;
-    case "2":
-      consultarReservas();
-      break;
-    case "3":
-      alterarReserva();
-      break;
-    case "4":
-      cancelarReserva();
-      break;
-    case "5":
-      usuarioLogado = null;
-      console.log("Logout realizado com sucesso.");
-      menuInicial();
-      break;
-    default:
-      console.log("Opção inválida. Tente novamente.");
-      menuUsuarioLogado();
-  }
-}
-
-// Fazer uma reserva
-function fazerReserva() {
-  console.log("\n=== Fazer Reserva ===");
-  const hotel = prompt("Nome do hotel: ");
-  const checkIn = prompt("Data de check-in (YYYY-MM-DD): ");
-  const checkOut = prompt("Data de check-out (YYYY-MM-DD): ");
-
-  if (!validarDatas(checkIn, checkOut)) {
-    console.log("Datas inválidas. Certifique-se de que estão no formato correto e que a data de check-out seja após a de check-in.");
-    return fazerReserva();
-  }
-
-  reservas.push({
-    usuario: usuarioLogado.email,
-    hotel,
-    checkIn,
-    checkOut,
-  });
-
-  console.log("Reserva realizada com sucesso!");
-  menuUsuarioLogado();
-}
-
-// Consultar reservas
-function consultarReservas() {
-  console.log("\n=== Consultar Reservas ===");
-  const reservasUsuario = reservas.filter(
-    (reserva) => reserva.usuario === usuarioLogado.email
-  );
-
-  if (reservasUsuario.length === 0) {
-    console.log("Nenhuma reserva encontrada.");
+  if (escolhaFuncionario === "1") {
+    await loginFuncionario(sistema);
+  } else if (escolhaFuncionario === "2") {
+    await cadastroFuncionario(sistema);
   } else {
-    reservasUsuario.forEach((reserva, index) => {
-      console.log(
-        `${index + 1}. Hotel: ${reserva.hotel}, Check-in: ${reserva.checkIn}, Check-out: ${reserva.checkOut}`
-      );
-    });
+    console.log("\nOpção inválida. Tente novamente.");
   }
-
-  menuUsuarioLogado();
 }
 
-// Alterar uma reserva
-function alterarReserva() {
-  console.log("\n=== Alterar Reserva ===");
-  const reservasUsuario = reservas.filter(
-    (reserva) => reserva.usuario === usuarioLogado.email
-  );
 
-  if (reservasUsuario.length === 0) {
-    console.log("Nenhuma reserva encontrada.");
-    return menuUsuarioLogado();
-  }
-
-  reservasUsuario.forEach((reserva, index) => {
-    console.log(
-      `${index + 1}. Hotel: ${reserva.hotel}, Check-in: ${reserva.checkIn}, Check-out: ${reserva.checkOut}`
-    );
-  });
-
-  const indice = parseInt(prompt("Digite o número da reserva que deseja alterar: ")) - 1;
-
-  if (indice < 0 || indice >= reservasUsuario.length) {
-    console.log("Reserva inválida.");
-    return alterarReserva();
-  }
-
-  const reserva = reservasUsuario[indice];
-  const novoHotel = prompt(`Novo nome do hotel (${reserva.hotel}): `) || reserva.hotel;
-  const novoCheckIn = prompt(`Nova data de check-in (${reserva.checkIn}): `) || reserva.checkIn;
-  const novoCheckOut = prompt(`Nova data de check-out (${reserva.checkOut}): `) || reserva.checkOut;
-
-  if (!validarDatas(novoCheckIn, novoCheckOut)) {
-    console.log("Datas inválidas. Tente novamente.");
-    return alterarReserva();
-  }
-
-  reserva.hotel = novoHotel;
-  reserva.checkIn = novoCheckIn;
-  reserva.checkOut = novoCheckOut;
-
-  console.log("Reserva alterada com sucesso!");
-  menuUsuarioLogado();
-}
-
-// Cancelar uma reserva
-function cancelarReserva() {
-  console.log("\n=== Cancelar Reserva ===");
-  const reservasUsuario = reservas.filter(
-    (reserva) => reserva.usuario === usuarioLogado.email
-  );
-
-  if (reservasUsuario.length === 0) {
-    console.log("Nenhuma reserva encontrada.");
-    return menuUsuarioLogado();
-  }
-
-  reservasUsuario.forEach((reserva, index) => {
-    console.log(
-      `${index + 1}. Hotel: ${reserva.hotel}, Check-in: ${reserva.checkIn}, Check-out: ${reserva.checkOut}`
-    );
-  });
-
-  const indice = parseInt(prompt("Digite o número da reserva que deseja cancelar: ")) - 1;
-
-  if (indice < 0 || indice >= reservasUsuario.length) {
-    console.log("Reserva inválida.");
-    return cancelarReserva();
-  }
-
-  reservas = reservas.filter((reserva, i) => i !== reservas.indexOf(reservasUsuario[indice]));
-
-  console.log("Reserva cancelada com sucesso!");
-  menuUsuarioLogado();
-}
-
-// Inicia o sistema
-menuInicial();
-
-
+main();
 
